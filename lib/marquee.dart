@@ -113,6 +113,7 @@ class Marquee extends StatefulWidget {
     Curve decelerationCurve = Curves.decelerate,
     this.onDone,
     this.scrollToEnd = false,
+    this.marqueeShortText = true,
   })  : assert(!blankSpace.isNaN),
         assert(blankSpace >= 0, "The blankSpace needs to be positive or zero."),
         assert(blankSpace.isFinite),
@@ -511,6 +512,8 @@ class Marquee extends StatefulWidget {
   /// TODO
   final bool scrollToEnd;
 
+  final bool marqueeShortText;
+
   @override
   State<StatefulWidget> createState() => _MarqueeState();
 }
@@ -706,8 +709,41 @@ class _MarqueeState extends State<Marquee> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final _textScaleFactor =
+        widget.textScaleFactor ?? MediaQuery.of(context).textScaleFactor;
     return LayoutBuilder(
       builder: (context, constraints) {
+        double? height;
+        if (!widget.marqueeShortText) {
+          var span = TextSpan(
+            text: widget.text,
+            style: widget.style,
+          );
+
+          var tp = TextPainter(
+            maxLines: 1,
+            textAlign: TextAlign.left,
+            textDirection: widget.textDirection,
+            textScaleFactor: _textScaleFactor,
+            text: span,
+          );
+
+          tp.layout(maxWidth: constraints.maxWidth);
+
+          if (!tp.didExceedMaxLines) {
+            return Container(
+              width: constraints.maxWidth,
+              child: Text(
+                widget.text,
+                style: widget.style,
+                textAlign: TextAlign.left,
+              ),
+            );
+          } else {
+            height = tp.height;
+          }
+        }
+
         _initialize(context, constraints);
         bool isHorizontal = widget.scrollAxis == Axis.horizontal;
 
@@ -748,7 +784,14 @@ class _MarqueeState extends State<Marquee> with SingleTickerProviderStateMixin {
           },
         );
 
-        return kIsWeb ? marquee : _wrapWithFadingEdgeScrollView(marquee);
+        var result = kIsWeb ? marquee : _wrapWithFadingEdgeScrollView(marquee);
+        return height == null
+            ? result
+            : Container(
+                height: height,
+                width: constraints.maxWidth,
+                child: result,
+              );
       },
     );
   }
