@@ -112,6 +112,7 @@ class Marquee extends StatefulWidget {
     this.decelerationDuration = Duration.zero,
     Curve decelerationCurve = Curves.decelerate,
     this.onDone,
+    this.scrollToEnd = false,
   })  : assert(!blankSpace.isNaN),
         assert(blankSpace >= 0, "The blankSpace needs to be positive or zero."),
         assert(blankSpace.isFinite),
@@ -507,6 +508,9 @@ class Marquee extends StatefulWidget {
   /// finished scrolled the specified number of rounds.
   final VoidCallback? onDone;
 
+  /// TODO
+  final bool scrollToEnd;
+
   @override
   State<StatefulWidget> createState() => _MarqueeState();
 }
@@ -572,7 +576,7 @@ class _MarqueeState extends State<Marquee> with SingleTickerProviderStateMixin {
   }
 
   /// Calculates all necessary values for animating, then starts the animation.
-  void _initialize(BuildContext context) {
+  void _initialize(BuildContext context, BoxConstraints constraints) {
     // Calculate lengths (amount of pixels that each phase needs).
     final totalLength = _getTextWidth(context) + widget.blankSpace;
     final accelerationLength = widget.accelerationCurve.integral *
@@ -583,9 +587,11 @@ class _MarqueeState extends State<Marquee> with SingleTickerProviderStateMixin {
         widget.velocity *
         _decelerationDuration.inMilliseconds /
         1000.0;
-    final linearLength =
-        (totalLength - accelerationLength.abs() - decelerationLength.abs()) *
-            (widget.velocity > 0 ? 1 : -1);
+    var linearLength = (totalLength -
+            (widget.scrollToEnd ? constraints.maxWidth : 0) -
+            accelerationLength.abs() -
+            decelerationLength.abs()) *
+        (widget.velocity > 0 ? 1 : -1);
 
     // Calculate scroll positions at various scrolling phases.
     _startPosition = 2 * totalLength - widget.startPadding;
@@ -700,45 +706,51 @@ class _MarqueeState extends State<Marquee> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    _initialize(context);
-    bool isHorizontal = widget.scrollAxis == Axis.horizontal;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        _initialize(context, constraints);
+        bool isHorizontal = widget.scrollAxis == Axis.horizontal;
 
-    Alignment? alignment;
+        Alignment? alignment;
 
-    switch (widget.crossAxisAlignment) {
-      case CrossAxisAlignment.start:
-        alignment = isHorizontal ? Alignment.topCenter : Alignment.centerLeft;
-        break;
-      case CrossAxisAlignment.end:
-        alignment =
-            isHorizontal ? Alignment.bottomCenter : Alignment.centerRight;
-        break;
-      case CrossAxisAlignment.center:
-        alignment = Alignment.center;
-        break;
-      case CrossAxisAlignment.stretch:
-      case CrossAxisAlignment.baseline:
-        alignment = null;
-        break;
-    }
+        switch (widget.crossAxisAlignment) {
+          case CrossAxisAlignment.start:
+            alignment =
+                isHorizontal ? Alignment.topCenter : Alignment.centerLeft;
+            break;
+          case CrossAxisAlignment.end:
+            alignment =
+                isHorizontal ? Alignment.bottomCenter : Alignment.centerRight;
+            break;
+          case CrossAxisAlignment.center:
+            alignment = Alignment.center;
+            break;
+          case CrossAxisAlignment.stretch:
+          case CrossAxisAlignment.baseline:
+            alignment = null;
+            break;
+        }
 
-    Widget marquee = ListView.builder(
-      controller: _controller,
-      scrollDirection: widget.scrollAxis,
-      reverse: widget.textDirection == TextDirection.rtl,
-      physics: NeverScrollableScrollPhysics(),
-      itemBuilder: (_, i) {
-        final text = i.isEven
-            ? Text(widget.text,
-                style: widget.style, textScaleFactor: widget.textScaleFactor)
-            : _buildBlankSpace();
-        return alignment == null
-            ? text
-            : Align(alignment: alignment, child: text);
+        Widget marquee = ListView.builder(
+          controller: _controller,
+          scrollDirection: widget.scrollAxis,
+          reverse: widget.textDirection == TextDirection.rtl,
+          physics: NeverScrollableScrollPhysics(),
+          itemBuilder: (_, i) {
+            final text = i.isEven
+                ? Text(widget.text,
+                    style: widget.style,
+                    textScaleFactor: widget.textScaleFactor)
+                : _buildBlankSpace();
+            return alignment == null
+                ? text
+                : Align(alignment: alignment, child: text);
+          },
+        );
+
+        return kIsWeb ? marquee : _wrapWithFadingEdgeScrollView(marquee);
       },
     );
-
-    return kIsWeb ? marquee : _wrapWithFadingEdgeScrollView(marquee);
   }
 
   /// Builds the blank space between children.
