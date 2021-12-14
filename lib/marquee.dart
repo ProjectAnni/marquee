@@ -731,6 +731,8 @@ class _MarqueeState extends State<Marquee> with SingleTickerProviderStateMixin {
           tp.layout(maxWidth: constraints.maxWidth);
 
           if (!tp.didExceedMaxLines) {
+            // disable initialization
+            _running = true;
             return Container(
               width: constraints.maxWidth,
               child: Text(
