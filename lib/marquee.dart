@@ -581,7 +581,7 @@ class _MarqueeState extends State<Marquee> with SingleTickerProviderStateMixin {
   /// Calculates all necessary values for animating, then starts the animation.
   void _initialize(BuildContext context, BoxConstraints constraints) {
     // Calculate lengths (amount of pixels that each phase needs).
-    final totalLength = _getTextWidth(context) + widget.blankSpace;
+    final totalLength = _getTextSize(context).width + widget.blankSpace;
     final accelerationLength = widget.accelerationCurve.integral *
         widget.velocity *
         _accelerationDuration.inMilliseconds /
@@ -690,7 +690,7 @@ class _MarqueeState extends State<Marquee> with SingleTickerProviderStateMixin {
   }
 
   /// Returns the width of the text.
-  double _getTextWidth(BuildContext context) {
+  Size _getTextSize(BuildContext context) {
     final span = TextSpan(text: widget.text, style: widget.style);
 
     final constraints = BoxConstraints(maxWidth: double.infinity);
@@ -704,7 +704,7 @@ class _MarqueeState extends State<Marquee> with SingleTickerProviderStateMixin {
       extentOffset: TextSpan(text: widget.text).toPlainText().length,
     ));
 
-    return boxes.last.right;
+    return Size(boxes.last.right, boxes.last.bottom);
   }
 
   @override
@@ -715,22 +715,9 @@ class _MarqueeState extends State<Marquee> with SingleTickerProviderStateMixin {
       builder: (context, constraints) {
         double? height;
         if (!widget.marqueeShortText) {
-          var span = TextSpan(
-            text: widget.text,
-            style: widget.style,
-          );
+          var textSize = _getTextSize(context);
 
-          var tp = TextPainter(
-            maxLines: 1,
-            textAlign: TextAlign.left,
-            textDirection: widget.textDirection,
-            textScaleFactor: _textScaleFactor,
-            text: span,
-          );
-
-          tp.layout(maxWidth: constraints.maxWidth);
-
-          if (!tp.didExceedMaxLines) {
+          if (textSize.width < constraints.maxWidth) {
             // disable initialization
             _running = true;
             return Container(
@@ -742,7 +729,7 @@ class _MarqueeState extends State<Marquee> with SingleTickerProviderStateMixin {
               ),
             );
           } else {
-            height = tp.height;
+            height = textSize.height;
           }
         }
 
