@@ -49,7 +49,7 @@ class _MyAppState extends State<MyApp> {
     return Marquee(
       key: Key("$_useRtlText"),
       text: !_useRtlText
-          ? 'Some sample text that takes sooooooooo much space.'
+          ? 'Some sample text that takes sooooooooo much space. IT MUST BE LONGER.'
           : 'זהו משפט ראשון של הטקסט הארוך. זהו המשפט השני של הטקסט הארוך',
       style: TextStyle(fontWeight: FontWeight.bold),
       scrollAxis: Axis.horizontal,
